@@ -1,0 +1,184 @@
+diff --git a/tensorflow/core/common_runtime/gpu/gpu_device.cc b/tensorflow/core/common_runtime/gpu/gpu_device.cc
+index 0b9e8f9cc2..ef49edf2f3 100644
+--- a/tensorflow/core/common_runtime/gpu/gpu_device.cc
++++ b/tensorflow/core/common_runtime/gpu/gpu_device.cc
+@@ -920,13 +920,13 @@ Status BaseGPUDeviceFactory::CreateDevices(const SessionOptions& options,
+ 
+   // Print each interconnect map to the log.
+   for (const InterconnectMap& im : interconnect_maps) {
+-    LOG(INFO) << "Device interconnect " << im.name << " with strength "
+-              << im.strength << " edge matrix:";
++    //LOG(INFO) << "Device interconnect " << im.name << " with strength "
++    //          << im.strength << " edge matrix:";
+     string line_buf = "     ";
+     for (int i = 0; i < visible_gpu_order.size(); ++i) {
+       strings::StrAppend(&line_buf, visible_gpu_order[i].value(), " ");
+     }
+-    LOG(INFO) << line_buf;
++    //LOG(INFO) << line_buf;
+     for (int i = 0; i < visible_gpu_order.size(); ++i) {
+       line_buf = strings::StrCat(visible_gpu_order[i].value(), ":   ");
+       CudaGpuId cuda_id_i = visible_gpu_order[i];
+@@ -939,7 +939,7 @@ Status BaseGPUDeviceFactory::CreateDevices(const SessionOptions& options,
+           line_buf.append("N ");
+         }
+       }
+-      LOG(INFO) << line_buf;
++      //LOG(INFO) << line_buf;
+     }
+   }
+ 
+diff --git a/tensorflow/core/framework/variant.h b/tensorflow/core/framework/variant.h
+index c02391dae3..859c41c33d 100644
+--- a/tensorflow/core/framework/variant.h
++++ b/tensorflow/core/framework/variant.h
+@@ -152,7 +152,7 @@ bool DecodeVariant(const string& buf, T* value);
+ //
+ class Variant {
+  public:
+-  constexpr Variant() noexcept = default;
++  Variant() noexcept = default;
+ 
+   Variant(const Variant& other)
+       : value_(other.is_empty() ? std::unique_ptr<ValueInterface>()
+diff --git a/tensorflow/core/grappler/clusters/utils.cc b/tensorflow/core/grappler/clusters/utils.cc
+index 50d6e6468f..0999a8e3d8 100644
+--- a/tensorflow/core/grappler/clusters/utils.cc
++++ b/tensorflow/core/grappler/clusters/utils.cc
+@@ -124,8 +124,9 @@ DeviceProperties GetDeviceInfo(const DeviceNameUtils::ParsedName& device) {
+       CudaGpuId cuda_gpu_id;
+       Status s = GpuIdManager::TfToCudaGpuId(tf_gpu_id, &cuda_gpu_id);
+       if (!s.ok()) {
+-        LOG(ERROR) << s;
+-        return unknown;
++        //LOG(ERROR) << s;
++        //return unknown;
++        return GetLocalGPUInfo(CudaGpuId(device.id));
+       }
+       return GetLocalGPUInfo(cuda_gpu_id);
+     } else {
+diff --git a/tensorflow/core/kernels/bucketize_op_gpu.cu.cc b/tensorflow/core/kernels/bucketize_op_gpu.cu.cc
+index 551d77f495..f610553c8b 100644
+--- a/tensorflow/core/kernels/bucketize_op_gpu.cu.cc
++++ b/tensorflow/core/kernels/bucketize_op_gpu.cu.cc
+@@ -39,7 +39,7 @@ __global__ void BucketizeCustomKernel(
+     CudaDeviceArrayStruct<float> boundaries_array, int32* out) {
+   const float* boundaries = GetCudaDeviceArrayOnDevice(&boundaries_array);
+ 
+-  extern __shared__ __align__(sizeof(float)) unsigned char shared_mem[];
++  extern __shared__ unsigned char shared_mem[];
+   float* shared_mem_boundaries = reinterpret_cast<float*>(shared_mem);
+ 
+   if (useSharedMem) {
+diff --git a/tensorflow/core/kernels/concat_lib_gpu_impl.cu.cc b/tensorflow/core/kernels/concat_lib_gpu_impl.cu.cc
+index a561d918bd..785e0ddf4e 100644
+--- a/tensorflow/core/kernels/concat_lib_gpu_impl.cu.cc
++++ b/tensorflow/core/kernels/concat_lib_gpu_impl.cu.cc
+@@ -69,7 +69,7 @@ __global__ void concat_variable_kernel(
+   IntType num_inputs = input_ptr_data.size;
+ 
+   // verbose declaration needed due to template
+-  extern __shared__ __align__(sizeof(T)) unsigned char smem[];
++  extern __shared__ unsigned char smem[];
+   IntType* smem_col_scan = reinterpret_cast<IntType*>(smem);
+ 
+   if (useSmem) {
+diff --git a/tensorflow/core/kernels/depthwise_conv_op_gpu.cu.cc b/tensorflow/core/kernels/depthwise_conv_op_gpu.cu.cc
+index 94989089ec..a2e3e8bc87 100644
+--- a/tensorflow/core/kernels/depthwise_conv_op_gpu.cu.cc
++++ b/tensorflow/core/kernels/depthwise_conv_op_gpu.cu.cc
+@@ -172,7 +172,7 @@ __global__ __launch_bounds__(1024, 2) void DepthwiseConv2dGPUKernelNHWCSmall(
+     const DepthwiseArgs args, const T* input, const T* filter, T* output) {
+   assert(CanLaunchDepthwiseConv2dGPUSmall(args));
+   // Holds block plus halo and filter data for blockDim.x depths.
+-  extern __shared__ __align__(sizeof(T)) unsigned char shared_memory[];
++  extern __shared__ unsigned char shared_memory[];
+   T* const shared_data = reinterpret_cast<T*>(shared_memory);
+ 
+   const int num_batches = args.batch;
+@@ -452,7 +452,7 @@ __global__ __launch_bounds__(1024, 2) void DepthwiseConv2dGPUKernelNCHWSmall(
+     const DepthwiseArgs args, const T* input, const T* filter, T* output) {
+   assert(CanLaunchDepthwiseConv2dGPUSmall(args));
+   // Holds block plus halo and filter data for blockDim.z depths.
+-  extern __shared__ __align__(sizeof(T)) unsigned char shared_memory[];
++  extern __shared__ unsigned char shared_memory[];
+   T* const shared_data = reinterpret_cast<T*>(shared_memory);
+ 
+   const int num_batches = args.batch;
+@@ -1118,7 +1118,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackpropFilterGPUKernelNHWCSmall(
+     const DepthwiseArgs args, const T* output, const T* input, T* filter) {
+   assert(CanLaunchDepthwiseConv2dBackpropFilterGPUSmall(args, blockDim.z));
+   // Holds block plus halo and filter data for blockDim.x depths.
+-  extern __shared__ __align__(sizeof(T)) unsigned char shared_memory[];
++  extern __shared__ unsigned char shared_memory[];
+   T* const shared_data = reinterpret_cast<T*>(shared_memory);
+ 
+   const int num_batches = args.batch;
+@@ -1388,7 +1388,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackpropFilterGPUKernelNCHWSmall(
+     const DepthwiseArgs args, const T* output, const T* input, T* filter) {
+   assert(CanLaunchDepthwiseConv2dBackpropFilterGPUSmall(args, blockDim.x));
+   // Holds block plus halo and filter data for blockDim.z depths.
+-  extern __shared__ __align__(sizeof(T)) unsigned char shared_memory[];
++  extern __shared__ unsigned char shared_memory[];
+   T* const shared_data = reinterpret_cast<T*>(shared_memory);
+ 
+   const int num_batches = args.batch;
+diff --git a/tensorflow/core/kernels/split_lib_gpu.cu.cc b/tensorflow/core/kernels/split_lib_gpu.cu.cc
+index 393818730b..a7d9e02853 100644
+--- a/tensorflow/core/kernels/split_lib_gpu.cu.cc
++++ b/tensorflow/core/kernels/split_lib_gpu.cu.cc
+@@ -121,7 +121,7 @@ __global__ void split_v_kernel(const T* input_ptr,
+   int num_outputs = output_ptr_data.size;
+ 
+   // verbose declaration needed due to template
+-  extern __shared__ __align__(sizeof(T)) unsigned char smem[];
++  extern __shared__ unsigned char smem[];
+   IntType* smem_col_scan = reinterpret_cast<IntType*>(smem);
+ 
+   if (useSmem) {
+diff --git a/tensorflow/stream_executor/cuda/cuda_gpu_executor.cc b/tensorflow/stream_executor/cuda/cuda_gpu_executor.cc
+index 5ecaf46b8c..b6fdec2623 100644
+--- a/tensorflow/stream_executor/cuda/cuda_gpu_executor.cc
++++ b/tensorflow/stream_executor/cuda/cuda_gpu_executor.cc
+@@ -856,7 +856,7 @@ CudaContext* CUDAExecutor::cuda_context() { return context_; }
+ // turn to gsys' topology modeling.
+ static int TryToReadNumaNode(const string &pci_bus_id, int device_ordinal) {
+ #if defined(__APPLE__)
+-  LOG(INFO) << "OS X does not support NUMA - returning NUMA node zero";
++  // LOG(INFO) << "OS X does not support NUMA - returning NUMA node zero";
+   return 0;
+ #elif defined(PLATFORM_WINDOWS)
+   // Windows support for NUMA is not currently implemented. Return node 0.
+diff --git a/tensorflow/workspace.bzl b/tensorflow/workspace.bzl
+index 48728ac131..268e4fe2e6 100644
+--- a/tensorflow/workspace.bzl
++++ b/tensorflow/workspace.bzl
+@@ -330,11 +330,11 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
+   tf_http_archive(
+       name = "protobuf_archive",
+       urls = [
+-          "https://mirror.bazel.build/github.com/google/protobuf/archive/396336eb961b75f03b25824fe86cf6490fb75e3a.tar.gz",
+-          "https://github.com/google/protobuf/archive/396336eb961b75f03b25824fe86cf6490fb75e3a.tar.gz",
++          "https://mirror.bazel.build/github.com/dtrebbien/protobuf/archive/50f552646ba1de79e07562b41f3999fe036b4fd0.tar.gz",
++          "https://github.com/dtrebbien/protobuf/archive/50f552646ba1de79e07562b41f3999fe036b4fd0.tar.gz",
+       ],
+-      sha256 = "846d907acf472ae233ec0882ef3a2d24edbbe834b80c305e867ac65a1f2c59e3",
+-      strip_prefix = "protobuf-396336eb961b75f03b25824fe86cf6490fb75e3a",
++      sha256 = "eb16b33431b91fe8cee479575cee8de202f3626aaf00d9bf1783c6e62b4ffbc7",
++      strip_prefix = "protobuf-50f552646ba1de79e07562b41f3999fe036b4fd0",
+   )
+ 
+   # We need to import the protobuf library under the names com_google_protobuf
+diff --git a/third_party/gpus/cuda/BUILD.tpl b/third_party/gpus/cuda/BUILD.tpl
+index 2a37c65bc7..61b203e005 100644
+--- a/third_party/gpus/cuda/BUILD.tpl
++++ b/third_party/gpus/cuda/BUILD.tpl
+@@ -110,7 +110,7 @@ cc_library(
+         ".",
+         "cuda/include",
+     ],
+-    linkopts = ["-lgomp"],
++    # linkopts = ["-lgomp"],
+     linkstatic = 1,
+     visibility = ["//visibility:public"],
+ )
