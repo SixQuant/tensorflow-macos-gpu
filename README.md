@@ -7,6 +7,8 @@
 > Tensorflow团队宣布停止支持1.2以后mac版的tensorflow gpu版本。
 >
 > 因此没办法直接安装只能自己用源码编译了。
+>
+> Tensorflow 1.8 with CUDA on macOS High Sierra 10.13.6
 
 CPU 运行 Tensorflow 感觉不够快，想试试 GPU 加速！正好自己有一块支持CUDA的显卡。
 
@@ -18,12 +20,12 @@ CPU 运行 Tensorflow 感觉不够快，想试试 GPU 加速！正好自己有�
 
 版本：
 
-- TensorFlow 1.8-rc1 source code，最新的1.9貌似还有问题
+- TensorFlow r1.8 source code，最新的1.9貌似还有问题
 - macOS 10.13.6，这个应该关系不大
-- 显卡驱动 387.10.10.10.40.105，支持的 CUDA 9.1也就是 CUDA Runtime 9.1
+- 显卡驱动 387.10.10.10.40.105，支持的 CUDA 9.1
 - CUDA 9.2，这个是 CUDA 驱动，可以高于上面的显卡支持的CUDA 版本，也就是 CUDA Driver 9.2
 - cuDNN 7.2，与上面的CUDA对应，直接安装最新版
-- **XCode 8.2.1**，这个是重点，请降级到这个版本，否则会编译出错或运行时出错
+- **XCode 8.2.1**，这个是重点，请降级到这个版本，否则会编译出错或运行时出错 `Segmentation Fault`
 - **bazel 0.14.0**，这个是重点，请降级到这个版本
 - **Python 3.6**，这个是重点，不要使用最新版的 Python 3.7 截止目前编译会有问题
 
@@ -81,13 +83,7 @@ $ brew switch python 3.7.0
 
 去apple开发者官网下载包，https://developer.apple.com/download/more/
 
-或者直接下载
-
-```bash
-http://mirrors.softproject.net/xcode/Xcode_8.2.1.xip
-```
-
-安装完后
+解压后复制到`/Applications/Xcode.app`，然后进行指向
 
 ```bash
 $ sudo xcode-select -s /Applications/Xcode.app
@@ -104,6 +100,8 @@ InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault
 ```
 
 > Command Line Tools，cc 即 clang
+>
+> 这个很重要，否则虽然编译成功但是跑复杂一点项目会出现  `Segmentation Fault`
 
 ## 环境变量
 
@@ -141,8 +139,8 @@ export PATH=$CUDA_HOME/bin:$PATH
 
 ```Bash
 $ sudo /usr/local/bin/uninstall_cuda_drv.pl
-$ sudo /usr/local/cuda/bin/uninstall_cuda_9.2.pl
-$ sudo rm -rf /Developer/NVIDIA/CUDA-9.2/
+$ sudo /usr/local/cuda/bin/uninstall_cuda_9.1.pl
+$ sudo rm -rf /Developer/NVIDIA/CUDA-9.1/
 $ sudo rm -rf /Library/Frameworks/CUDA.framework
 $ sudo rm -rf /usr/local/cuda/
 ```
@@ -369,7 +367,7 @@ InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault
 这里可以直接下载修改好的源码
 
 ```Bash
-$ curl -O https://github.com/SixQuant/tensorflow-macos-gpu/raw/master/tensorflow-macos-gpu-r1.8-src.tar.gz
+$ curl -O https://raw.githubusercontent.com/SixQuant/tensorflow-macos-gpu/master/tensorflow-macos-gpu-r1.8-src.tar.gz
 ```
 
 或者手工修改 
@@ -377,9 +375,9 @@ $ curl -O https://github.com/SixQuant/tensorflow-macos-gpu/raw/master/tensorflow
 ```Bash
 $ git clone https://github.com/tensorflow/tensorflow -b r1.8
 $ cd tensorflow
-$ curl -O https://github.com/SixQuant/tensorflow-macos-gpu/raw/master/patch/tensorflow-macos-gpu-r1.8.patch
+$ curl -O https://raw.githubusercontent.com/SixQuant/tensorflow-macos-gpu/master/patch/tensorflow-macos-gpu-r1.8.patch
 $ git apply tensorflow-macos-gpu-r1.8.patch
-$ curl -o third_party/nccl/nccl.h https://github.com/SixQuant/tensorflow-macos-gpu/raw/master/patch/nccl.h
+$ curl -o third_party/nccl/nccl.h https://raw.githubusercontent.com/SixQuant/tensorflow-macos-gpu/master/patch/nccl.h
 ```
 
 ### Build
@@ -467,12 +465,11 @@ Configuration finished
 > * cuDNN 7.2
 > * compute capability 3.0,3.5,5.0,5.2,6.0,6.1 这个一定要去查你的显卡支持的版本，可以输入多个
 
-上面实际上是生成了编译配置文件 .tf_configure.bazelrc
+上面实际上是生成了编译配置文件 `.tf_configure.bazelrc`
 
 开始编译
 
 ```Bash
-$ rm -rf /private/var/tmp/_bazel_c
 $ bazel clean --expunge
 $ bazel build --config=opt --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --action_env PATH --action_env DYLD_LIBRARY_PATH //tensorflow/tools/pip_package:build_pip_package
 ```
@@ -561,7 +558,7 @@ $ bazel-bin/tensorflow/tools/pip_package/build_pip_package ~/Downloads/
 清理
 
 ```bash
-$ bazel clean --expunge && rm -rf /private/var/tmp/_bazel_c
+$ bazel clean --expunge
 ```
 
 ## 安装
@@ -574,7 +571,7 @@ $ pip3 install ~/Downloads/tensorflow-1.8.0-cp36-cp36m-macosx_10_13_x86_64.whl
 也可以直接通过http安装
 
 ```bash
-$ pip3 install https://github.com/SixQuant/tensorflow-macos-gpu/raw/master/tensorflow-1.8.0-cp36-cp36m-macosx_10_13_x86_64.whl
+$ pip3 install https://github.com/SixQuant/tensorflow-macos-gpu/releases/download/v1.8.0/tensorflow-1.8.0-cp36-cp36m-macosx_10_13_x86_64.whl
 ```
 
 > 如果是直接安装，请一定要确认相关的版本是否和编译的一致或更高
@@ -830,6 +827,8 @@ os.environ['DYLD_LIBRARY_PATH']
 
 > 直接忽略这个警告
 
+## GPU 内存有泄漏？？？
 
+不知道咋解决:(
 
  
